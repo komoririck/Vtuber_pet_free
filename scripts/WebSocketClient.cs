@@ -2,9 +2,6 @@ using UnityEngine;
 using NativeWebSocket;
 using System;
 using System.IO;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Collections;
 
 public class WebSocketClient : MonoBehaviour {
     public GameObject alertPopup;
@@ -276,9 +273,6 @@ public class WebSocketClient : MonoBehaviour {
 
         waitingForARequest = true;
         alertPopup.SetActive(true);
-
-        float timeoutDuration = 60f;
-        float timer = 0f;
 
         waitingForARequest = true;
         websocket.OnMessage += (bytes) =>{

@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class VolumeController : MonoBehaviour
@@ -10,7 +8,7 @@ public class VolumeController : MonoBehaviour
     private AudioSource audioSource;
 
     private float timer = 0f;
-    private readonly float updateInterval = 0.00f;
+    private readonly float updateInterval = 0.05f;
 
 
     float rmsVal;
@@ -19,7 +17,6 @@ public class VolumeController : MonoBehaviour
 
     private readonly float minFrequency = 00.0f;
     private readonly float maxFrequency = 400.0f;
-    readonly float scaleMax = 1000.0f;
 
     private const int QSamples = 1024;
     private const float RefValue = 0.1f;
@@ -32,6 +29,15 @@ public class VolumeController : MonoBehaviour
 
     void Start()
     {
+        if (audioSource != null)
+        {
+            if (Microphone.IsRecording(microphoneDevice))
+            {
+                Microphone.End(microphoneDevice);
+            }
+            Destroy(audioSource);
+        }
+
         _samples = new float[QSamples];
         _spectrum = new float[QSamples];
         _fSample = AudioSettings.outputSampleRate;
@@ -39,12 +45,12 @@ public class VolumeController : MonoBehaviour
         Application.runInBackground = true;
 
         microphoneDevice = PlayerPrefs.GetString("MicrophoneDefaultValue", null);
-        microphoneDevice = Microphone.devices.Length > 0 ? Microphone.devices[0] : null;
 
         audioSource = gameObject.AddComponent<AudioSource>();
-        audioSource.clip = Microphone.Start(microphoneDevice, true, 10, AudioSettings.outputSampleRate);
-        while (!(Microphone.GetPosition(null) > 0)) { }
+        audioSource.outputAudioMixerGroup = FindAnyObjectByType<UiManager>().audioGroup;
+        audioSource.clip = Microphone.Start(microphoneDevice, true, 5, AudioSettings.outputSampleRate);
         audioSource.loop = true;
+        while (Microphone.GetPosition(microphoneDevice) <= 0) { }
         audioSource.Play();
     }
 
@@ -67,6 +73,10 @@ public class VolumeController : MonoBehaviour
             sum += _samples[i] * _samples[i]; // Sum squared samples
         }
         rmsVal = Mathf.Sqrt(sum / QSamples); // RMS = square root of average
+
+        if (RefValue == 0)
+            return;
+
         float dbValCal = 20 * Mathf.Log10(rmsVal / RefValue); // Calculate dB
         if (dbValCal < -80)
             dbValCal = -80;
@@ -98,7 +108,7 @@ public class VolumeController : MonoBehaviour
             var dR = _spectrum[maxN + 1] / _spectrum[maxN];
             freqN += 0.5f * (dR * dR - dL * dL);
         }
-        pitchVal = FreqToScale((freqN * (_fSample / 2) / QSamples), minFrequency, maxFrequency, scaleMax);
+        pitchVal = FreqToScale((freqN * (_fSample / 2) / QSamples), minFrequency, maxFrequency);
 
     }
     public float GetVolume()
@@ -110,7 +120,7 @@ public class VolumeController : MonoBehaviour
         return pitchVal;
     }
 
-    float FreqToScale(float value, float inputMin, float inputMax, float outputMax){
+    float FreqToScale(float value, float inputMin, float inputMax){
         float clampedValue = Mathf.Clamp(value, inputMin, inputMax);
 
         if (inputMin == clampedValue)
@@ -128,18 +138,5 @@ public class VolumeController : MonoBehaviour
         {
             Destroy(audioSource);
         }
-    }
-
-    public void SetMicrophoneDevice(int device)
-    {
-        microphoneDevice = Microphone.devices[device];
-    }
-    public void ChangeMicrophone() {
-        Microphone.End(microphoneDevice);
-        string newDevice = PlayerPrefs.GetString("MicrophoneDefaultValue", null);
-        audioSource.clip = Microphone.Start(newDevice, true, 10, AudioSettings.outputSampleRate);
-        while (!(Microphone.GetPosition(null) > 0)) { }
-        audioSource.loop = true;
-        audioSource.Play();
     }
 }

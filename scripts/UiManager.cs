@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using NativeWebSocket;
+using UnityEngine.Audio;
 
 public class UiManager : MonoBehaviour
 {
@@ -12,28 +13,33 @@ public class UiManager : MonoBehaviour
     public WebSocketClient webSocketClient;
     public VolumeController volumeController;
     public TMP_Dropdown microphoneDropdown;
+    public AudioMixerGroup audioGroup = null;
 
-    Slider volumeGainScrollbarDisplay;
-    Scrollbar volumeGainScrollbar;
-    Scrollbar volumeThresoldScrollbar;
+    public Slider volumeGainScrollbarDisplay;
+    public Scrollbar volumeGainScrollbar;
+    public Scrollbar volumeThresoldScrollbar;
 
-    Scrollbar frequencyGainScrollbar;
-    Slider frequencyGainScrollbarDisplay;
+    public Scrollbar frequencyGainScrollbar;
+    public Slider frequencyGainScrollbarDisplay;
 
-    Button connButton;
-    Button desConnButton;
-
+    public Button connButton;
+    public Button desConnButton;
+     
     float frequencyGainScrollbarDefaultValue = 0;
     float volumeGainScrollbarDefaultValue = 0;
     float volumeThresholdScrollbarDefaultValue = 0;
 
-    float micVolume;
-    float micFreq;
+    float currentMicVolume = 0;
+    float currentMicFreq = 0;
+
+    float targetMicVolume = 0;
+    float targetMicFreq = 0;
+
     float lastMicVolume = 0;
     float lastmicFreq = 0;
 
     private float timer = 0f;
-    private readonly float interval = 0.2f;
+    private readonly float interval = 0.05f;
 
     void Start(){
         Application.runInBackground = true;
@@ -48,14 +54,6 @@ public class UiManager : MonoBehaviour
         if (microphoneDropdown != null)
             microphoneDropdown.onValueChanged.AddListener(OnDropdownValueChanged);
 
-        volumeGainScrollbarDisplay = GameObject.Find("VolumeGainScrollbarDisplay").GetComponent<Slider>();
-        volumeGainScrollbar = GameObject.Find("VolumeGainScrollbar").GetComponent<Scrollbar>();
-        volumeThresoldScrollbar = GameObject.Find("VolumeThresoldScrollbar").GetComponent<Scrollbar>();
-        frequencyGainScrollbar = GameObject.Find("FrequencyGainScrollbar").GetComponent<Scrollbar>();
-        frequencyGainScrollbarDisplay = GameObject.Find("FrequencyGainScrollbarDisplay").GetComponent<Slider>();
-
-        connButton = GameObject.Find("ButtonConnect").GetComponent<Button>();
-        desConnButton = GameObject.Find("ButtonDesconnect").GetComponent<Button>();
         desConnButton.enabled = false;
 
         frequencyGainScrollbar.onValueChanged.AddListener(FrequencyGainOnScrollValueChanged);
@@ -87,42 +85,42 @@ public class UiManager : MonoBehaviour
         PlayerPrefs.SetFloat("volumeThresholdScrollbarDefaultValue", volumeThresoldScrollbar.value);
     }
     void Update() {
-        micVolume = ((volumeController.GetVolume() / 80) + 1);
-        micVolume = Mathf.Clamp(micVolume, 0, 1);
+        currentMicVolume = ((volumeController.GetVolume() / 80) + 1);
+        currentMicFreq = volumeController.GetFrequency();
 
-        micFreq = volumeController.GetFrequency();
-        micFreq *= 1 + frequencyGainScrollbar.value;
-        micFreq = Mathf.Clamp(micFreq, 0, 1);
-
-        if (micVolume < (volumeThresoldScrollbar.value)){
-            micVolume = 0;
-            micFreq = 0;
-        }
-
-        if (micVolume > 0)
-            micVolume += volumeGainScrollbar.value;
-
-        frequencyGainScrollbarDisplay.value = micFreq;
-        volumeGainScrollbarDisplay.value = micVolume;
+        targetMicVolume = currentMicVolume;
+        targetMicFreq = currentMicFreq;
 
         timer += Time.deltaTime;
         if (timer >= interval){
-            if (lastMicVolume != micVolume) {
-                webSocketClient.ParamSendData("PetVolume", ""+(micVolume*100));
-                lastMicVolume = micVolume;
+            targetMicVolume = Mathf.Clamp(targetMicVolume, 0, 1);
+
+            targetMicFreq *= 1 + frequencyGainScrollbar.value;
+            targetMicFreq = Mathf.Clamp(targetMicFreq, 0, 1);
+
+            if (targetMicVolume < (volumeThresoldScrollbar.value))
+            {
+                targetMicVolume = 0;
+                targetMicFreq = 0;
             }
-            if (lastmicFreq != micFreq) {
-                webSocketClient.ParamSendData("PetFrequency", ""+(micVolume*100));
-                lastmicFreq = micFreq;
+
+            if (targetMicVolume > 0)
+                targetMicVolume += volumeGainScrollbar.value;
+
+            frequencyGainScrollbarDisplay.value = targetMicFreq;
+            volumeGainScrollbarDisplay.value = targetMicVolume;
+
+
+            if (lastMicVolume != targetMicVolume) {
+                webSocketClient.ParamSendData("PetVolume", ""+(targetMicVolume*100));
+                lastMicVolume = targetMicVolume;
+            }
+            if (lastmicFreq != targetMicFreq) {
+                webSocketClient.ParamSendData("PetFrequency", ""+(targetMicVolume*100));
+                lastmicFreq = targetMicFreq;
             }
             timer = 0f;
         }
-    }
-
-    void OnDropdownValueChanged(int value){
-        volumeController.SetMicrophoneDevice(value);
-        PlayerPrefs.SetInt("MicrophoneDefaultValue", value);
-        volumeController.ChangeMicrophone();
     }
 
     public void OpenDevPage() {
@@ -175,15 +173,36 @@ public class UiManager : MonoBehaviour
         
         microphoneDropdown.ClearOptions();
         microphoneDropdown.AddOptions(options);
+        
+        string savedMic = PlayerPrefs.GetString("MicrophoneDefaultValue", null);
+        int currentMic = 0;
+        for (int i = 0; i < microphoneDropdown.options.Count; i++) {
+            if (microphoneDropdown.options[i].text.Equals(savedMic))
+            {
+                currentMic = i;
+                break;
+            }
+        }
 
-        int defaultMicIndex = PlayerPrefs.GetInt("MicrophoneDefaultValue", -1);
-
-        if (defaultMicIndex >= 0 && defaultMicIndex < options.Count){
-            microphoneDropdown.value = defaultMicIndex;
+        if (currentMic >= 0 && currentMic < options.Count){
+            microphoneDropdown.value = currentMic;
         } else {
             microphoneDropdown.value = 0;
         }
 
         microphoneDropdown.RefreshShownValue();
+
+        if (currentMic == 0)
+            PlayerPrefs.SetString("MicrophoneDefaultValue", microphoneDropdown.options[currentMic].text);
+
+        volumeController = gameObject.AddComponent<VolumeController>();
+
+    }
+    void OnDropdownValueChanged(int value)
+    {
+        Destroy(volumeController);
+        PlayerPrefs.SetString("MicrophoneDefaultValue", microphoneDropdown.options[value].text);
+        volumeController = gameObject.AddComponent<VolumeController>();
+
     }
 }

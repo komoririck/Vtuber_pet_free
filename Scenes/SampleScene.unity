@@ -1877,9 +1877,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 727252178}
-  - component: {fileID: 727252177}
   - component: {fileID: 727252179}
-  - component: {fileID: 727252181}
+  - component: {fileID: 727252177}
   m_Layer: 0
   m_Name: SceneController
   m_TagString: Untagged
@@ -1931,23 +1930,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   webSocketClient: {fileID: 727252177}
-  volumeController: {fileID: 727252181}
+  volumeController: {fileID: 0}
   microphoneDropdown: {fileID: 1476899598}
---- !u!114 &727252181
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 727252175}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 43573a05a20d1ad449a0270614ee8926, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  microphoneDevice: 
-  dbVal: 0
-  pitchVal: 0
+  audioGroup: {fileID: -3802874234720457395, guid: d3743fc843d92e9408a838c3c0c49b3a, type: 2}
+  volumeGainScrollbarDisplay: {fileID: 293611889}
+  volumeGainScrollbar: {fileID: 421331016}
+  volumeThresoldScrollbar: {fileID: 949741301}
+  frequencyGainScrollbar: {fileID: 421331016}
+  frequencyGainScrollbarDisplay: {fileID: 1970597315}
+  connButton: {fileID: 1112464217}
+  desConnButton: {fileID: 1340573091}
 --- !u!1 &734139172
 GameObject:
   m_ObjectHideFlags: 0
@@ -2811,7 +2803,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 968937232}
   m_HandleRect: {fileID: 968937231}
   m_Direction: 0
-  m_Value: 0
+  m_Value: 0.04
   m_Size: 0.2
   m_NumberOfSteps: 0
   m_OnValueChanged:
