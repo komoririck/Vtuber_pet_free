@@ -45,9 +45,6 @@ public class UiManager : MonoBehaviour
         Application.runInBackground = true;
 
         sceneController = FindObjectOfType<GameObject>();
-        if (sceneController == null){
-            Debug.LogWarning("SceneController not found in the scene.");
-        }
 
         PopulateDropdownWithMicrophones();
 

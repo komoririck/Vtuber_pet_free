@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class VolumeController : MonoBehaviour
@@ -50,7 +51,15 @@ public class VolumeController : MonoBehaviour
         audioSource.outputAudioMixerGroup = FindAnyObjectByType<UiManager>().audioGroup;
         audioSource.clip = Microphone.Start(microphoneDevice, true, 5, AudioSettings.outputSampleRate);
         audioSource.loop = true;
-        while (Microphone.GetPosition(microphoneDevice) <= 0) { }
+
+        StartCoroutine(StartRecording());
+    }
+    IEnumerator StartRecording()
+    {
+        while (Microphone.GetPosition(microphoneDevice) <= 0)
+        {
+            yield return null; // Wait for the next frame
+        }
         audioSource.Play();
     }
 
